@@ -203,9 +203,11 @@ router.get("/lab/:labId", (req: AuthenticatedRequest, res: Response): void => {
 
     // Fetch this student's submission for this lab
     const submission = db.prepare(`
-      SELECT id, file_path, notes, grade, comment, submission_date, team_members
-      FROM lab_submissions
-      WHERE lab_id = ? AND (student_id = ? OR team_members LIKE ?)
+      SELECT ls.id, ls.file_path, ls.notes, ls.grade, ls.comment, ls.submission_date, ls.team_members, ls.student_id,
+             u.name as submitter_name
+      FROM lab_submissions ls
+      JOIN users u ON ls.student_id = u.id
+      WHERE ls.lab_id = ? AND (ls.student_id = ? OR ls.team_members LIKE ?)
     `).get(labId, studentId, `%"${studentId}"%`) as any;
 
     // Fetch classmates in case of team lab

@@ -109,6 +109,21 @@ const StudentLab: React.FC = () => {
     fetchLabDetails();
   }, [labId]);
 
+  const getTeammateName = () => {
+    if (!submission || !submission.team_members) return null;
+    try {
+      const partners = JSON.parse(submission.team_members);
+      if (partners.length > 0) {
+        const partner = classmates.find(c => c.id === partners[0]);
+        return partner ? partner.name : "Напарник";
+      }
+    } catch (e) {
+      const partner = classmates.find(c => c.id === submission.team_members);
+      return partner ? partner.name : "Напарник";
+    }
+    return null;
+  };
+
   return (
     <Layout>
       <div className="student-lab">
@@ -309,8 +324,17 @@ const StudentLab: React.FC = () => {
                         <span>Работа проверена и оценена</span>
                       </div>
                       <div style={{ fontSize: "14px", marginBottom: "8px" }}>
-                        <b>Ваш файл:</b> <a href={submission.file_path} target="_blank" rel="noreferrer" style={{ color: "var(--color-primary)", textDecoration: "underline" }}>Открыть файл решения</a>
+                        <b>Файл решения:</b> <a href={submission.file_path} target="_blank" rel="noreferrer" style={{ color: "var(--color-primary)", textDecoration: "underline" }}>Открыть файл</a>
                       </div>
+                      {submission.student_id !== user?.id ? (
+                        <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "8px" }}>
+                          <b>Отправлено напарником:</b> {submission.submitter_name || getTeammateName()}
+                        </div>
+                      ) : getTeammateName() ? (
+                        <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "8px" }}>
+                          <b>Напарник:</b> {getTeammateName()}
+                        </div>
+                      ) : null}
                       {submission.notes && (
                         <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "8px" }}>
                           <b>Заметка:</b> {submission.notes}
@@ -323,9 +347,23 @@ const StudentLab: React.FC = () => {
                         <Clock size={16} />
                         <span>Решение на проверке у преподавателя</span>
                       </div>
-                      <div style={{ fontSize: "14px" }}>
-                        <b>Ваш файл:</b> <a href={submission.file_path} target="_blank" rel="noreferrer" style={{ color: "var(--color-primary)", textDecoration: "underline" }}>Открыть файл решения</a>
+                      <div style={{ fontSize: "14px", marginBottom: "8px" }}>
+                        <b>Файл решения:</b> <a href={submission.file_path} target="_blank" rel="noreferrer" style={{ color: "var(--color-primary)", textDecoration: "underline" }}>Открыть файл</a>
                       </div>
+                      {submission.student_id !== user?.id ? (
+                        <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "8px" }}>
+                          <b>Отправлено напарником:</b> {submission.submitter_name || getTeammateName()}
+                        </div>
+                      ) : getTeammateName() ? (
+                        <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "8px" }}>
+                          <b>Напарник:</b> {getTeammateName()}
+                        </div>
+                      ) : null}
+                      {submission.notes && (
+                        <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "8px" }}>
+                          <b>Заметка:</b> {submission.notes}
+                        </div>
+                      )}
                       <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "12px" }}>
                         Вы можете отправить новое решение (старое будет перезаписано).
                       </div>
