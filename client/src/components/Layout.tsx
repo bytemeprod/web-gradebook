@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.tsx";
 import { 
@@ -23,19 +23,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">(() => {
-    // Sync with HTML class
-    const isDark = document.documentElement.classList.contains("dark");
-    return isDark ? "dark" : "light";
+    const saved = localStorage.getItem("theme") as "light" | "dark";
+    if (saved) return saved;
+    // Default to dark mode for rich aesthetics
+    return "dark";
   });
 
-  const toggleTheme = () => {
-    const nextTheme = theme === "light" ? "dark" : "light";
-    setTheme(nextTheme);
-    if (nextTheme === "dark") {
+  useEffect(() => {
+    if (theme === "dark") {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
   };
 
   const handleLogout = async () => {
