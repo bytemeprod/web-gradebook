@@ -126,6 +126,16 @@ const TeacherGradebook: React.FC = () => {
     }
   };
 
+  const toggleAbsence = async (studentId: string, lessonId: string, currentValue: string) => {
+    const nextValue = currentValue === "Н" ? "" : "Н";
+    await updateGrade(studentId, lessonId, nextValue);
+  };
+
+  const toggleLateness = async (studentId: string, lessonId: string, currentValue: string) => {
+    const nextValue = currentValue === "О" ? "" : "О";
+    await updateGrade(studentId, lessonId, nextValue);
+  };
+
   return (
     <Layout>
       <div className="teacher-gradebook">
@@ -285,6 +295,18 @@ const TeacherGradebook: React.FC = () => {
                                     currentGrade: val
                                   });
                                   setInputValue(val === "Н" || val === "О" ? "" : val);
+                                }}
+                                onContextMenu={(e) => {
+                                  if (isExpelled) return;
+                                  e.preventDefault();
+                                  toggleAbsence(student.id, lesson.id, val);
+                                }}
+                                onAuxClick={(e) => {
+                                  if (isExpelled) return;
+                                  if (e.button === 1) {
+                                    e.preventDefault();
+                                    toggleLateness(student.id, lesson.id, val);
+                                  }
                                 }}
                               >
                                 {val || "—"}
