@@ -4,8 +4,8 @@ import { AuthProvider, useAuth } from "./context/AuthContext.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import PublicRoute from "./components/PublicRoute.tsx";
 import Login from "./pages/Login.tsx";
+import StudentHome from "./pages/student/StudentHome.tsx";
 
-const StudentHomePlaceholder = () => <div><h1>Личный кабинет студента</h1><p>Расписание</p></div>;
 const StudentGradebookPlaceholder = () => <div><h1>Электронный журнал студента</h1></div>;
 const StudentSubjectPlaceholder = () => <div><h1>Детализация предмета</h1></div>;
 const TeacherHomePlaceholder = () => <div><h1>Кабинет преподавателя</h1><p>Расписание преподавателя</p></div>;
@@ -34,7 +34,7 @@ const App: React.FC = () => {
 
           {/* Student Routes */}
           <Route element={<ProtectedRoute allowedRoles={["student"]} />}>
-            <Route path="/student" element={<StudentHomePlaceholder />} />
+            <Route path="/student" element={<StudentHome />} />
             <Route path="/student/gradebook" element={<StudentGradebookPlaceholder />} />
             <Route path="/student/subject/:subjectId" element={<StudentSubjectPlaceholder />} />
           </Route>
