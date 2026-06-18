@@ -230,6 +230,59 @@ const StudentGradebook: React.FC = () => {
                     {grades.filter(g => g.grade === "О").length}
                   </div>
                 </div>
+            </div>
+
+            {/* Subject average bar chart */}
+            <div className="glass-panel animate-fade-in" style={{ marginBottom: "28px" }}>
+              <h3 style={{ fontSize: "16px", fontWeight: 600, marginBottom: "16px" }}>Средний балл по предметам</h3>
+              <div style={{ 
+                height: "220px", 
+                display: "flex", 
+                alignItems: "flex-end", 
+                gap: "24px", 
+                padding: "20px 20px 40px 20px", 
+                border: "1px solid var(--border-color)",
+                borderRadius: "var(--radius-sm)",
+                background: "var(--bg-primary)",
+                overflowX: "auto" 
+              }}>
+                {subjects.map(sub => {
+                  const stats = getSubjectStats(sub.id);
+                  const avg = parseFloat(stats.average);
+                  const heightPercent = !isNaN(avg) ? (avg / 10) * 100 : 0;
+                  return (
+                    <div key={sub.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "1 0 100px", height: "100%", justifyContent: "flex-end", position: "relative" }}>
+                      <span style={{ fontSize: "13px", fontWeight: "700", marginBottom: "8px", color: "var(--color-primary)" }}>
+                        {stats.average}
+                      </span>
+                      <div style={{
+                        width: "40px",
+                        height: `${heightPercent}%`,
+                        background: "linear-gradient(180deg, var(--color-primary) 0%, rgba(99, 102, 241, 0.3) 100%)",
+                        borderRadius: "6px 6px 0 0",
+                        transition: "height 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+                        boxShadow: "0 4px 12px rgba(99, 102, 241, 0.15)"
+                      }} />
+                      <span 
+                        style={{ 
+                          fontSize: "11px", 
+                          color: "var(--text-secondary)", 
+                          marginTop: "8px", 
+                          textAlign: "center", 
+                          whiteSpace: "nowrap", 
+                          overflow: "hidden", 
+                          textOverflow: "ellipsis", 
+                          width: "100%",
+                          position: "absolute",
+                          bottom: "-25px"
+                        }} 
+                        title={sub.name}
+                      >
+                        {sub.name}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
