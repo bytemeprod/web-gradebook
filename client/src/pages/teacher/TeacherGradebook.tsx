@@ -278,8 +278,30 @@ const TeacherGradebook: React.FC = () => {
 
                       return (
                         <tr key={student.id} className={rowClass}>
-                          <td style={{ fontWeight: 500 }}>
-                            {student.name}
+                          <td style={{ fontWeight: 500, display: "flex", alignItems: "center", gap: "8px", minHeight: "45px" }}>
+                            <span>{student.name}</span>
+                            {isNew && (
+                              <span style={{ 
+                                padding: "2px 6px", 
+                                fontSize: "10px", 
+                                fontWeight: "700", 
+                                background: "var(--color-success)", 
+                                color: "white", 
+                                borderRadius: "10px",
+                                textTransform: "uppercase"
+                              }}>Новый</span>
+                            )}
+                            {isExpelled && (
+                              <span style={{ 
+                                padding: "2px 6px", 
+                                fontSize: "10px", 
+                                fontWeight: "700", 
+                                background: "rgba(239, 68, 68, 0.15)", 
+                                color: "var(--color-danger)", 
+                                borderRadius: "10px",
+                                textTransform: "uppercase"
+                              }}>Отчислен</span>
+                            )}
                           </td>
                           {lessons.map(lesson => {
                             const val = getStudentGrade(student.id, lesson.id);
