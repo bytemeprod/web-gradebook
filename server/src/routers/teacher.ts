@@ -336,4 +336,56 @@ router.delete("/labs/:labId", (req: AuthenticatedRequest, res: Response): void =
   }
 });
 
+// GET /api/teacher/submissions
+router.get("/submissions", (req: AuthenticatedRequest, res: Response): void => {
+  try {
+    const teacherId = req.user?.id;
+
+    const submissions = db.prepare(`
+      SELECT ls.id, ls.lab_id, ls.student_id, ls.file_path, ls.notes, ls.grade, ls.comment, ls.submission_date, ls.team_members,
+             l.title as lab_title, l.max_grade as lab_max_grade, l.is_team as lab_is_team,
+             u.name as student_name, sub.name as subject_name
+      FROM lab_submissions ls
+      JOIN labs l ON ls.lab_id = l.id
+      JOIN subjects sub ON l.subject_id = sub.id
+      JOIN users u ON ls.student_id = u.id
+      WHERE sub.teacher_id = ?
+      ORDER BY ls.grade IS NULL DESC, ls.submission_date DESC
+    `).all(teacherId);
+
+    const students = db.prepare(`
+      SELECT id, name FROM users WHERE role = 'student'
+    `).all();
+
+    res.json({ submissions, students });
+  } catch (error) {
+    console.error("Error fetching teacher submissions:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/teacher/submissions/:submissionId/grade
+router.post("/submissions/:submissionId/grade", (req: AuthenticatedRequest, res: Response): void => {
+  try {
+    const { submissionId } = req.params;
+    const { grade, comment } = req.body;
+
+    if (grade === undefined || grade === null) {
+      res.status(400).json({ error: "Grade is required." });
+      return;
+    }
+
+    db.prepare(`
+      UPDATE lab_submissions
+      SET grade = ?, comment = ?
+      WHERE id = ?
+    `).run(Number(grade), comment || null, submissionId);
+
+    res.json({ message: "Submission graded successfully." });
+  } catch (error) {
+    console.error("Error grading submission:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;
