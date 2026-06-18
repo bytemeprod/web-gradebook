@@ -241,3 +241,48 @@ button, input, textarea, select {
   padding: 1px 3px;
   border-radius: 2px;
 }
+
+/* Premium styling polish and transitions */
+.glass-panel {
+  transition: transform var(--transition-normal), background var(--transition-normal), border var(--transition-normal), box-shadow var(--transition-normal);
+}
+.glass-panel:hover {
+  box-shadow: var(--glass-shadow), 0 12px 36px rgba(0, 0, 0, 0.04);
+}
+
+button, .submit-btn, .action-link-btn, .download-btn {
+  transition: transform var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+button:hover:not(:disabled), .submit-btn:hover:not(:disabled), .download-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+button:active:not(:disabled), .submit-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+input, select, textarea {
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  outline: none;
+}
+
+/* Advanced Scrollbar refinement */
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
