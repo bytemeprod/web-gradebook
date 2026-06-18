@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Layout from "../../components/Layout.tsx";
 import { api } from "../../api/client.ts";
-import { Subject, Lesson, Grade } from "../../types/index.ts";
-import { Calendar, User, ChevronRight, Award, AlertTriangle, Clock } from "lucide-react";
+import type { Subject, Lesson, Grade } from "../../types/index.ts";
+import { User, ChevronRight, Award, AlertTriangle, Clock } from "lucide-react";
 
 const StudentGradebook: React.FC = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -230,6 +230,7 @@ const StudentGradebook: React.FC = () => {
                     {grades.filter(g => g.grade === "О").length}
                   </div>
                 </div>
+              </div>
             </div>
 
             {/* Subject average bar chart */}

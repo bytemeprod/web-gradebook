@@ -58,6 +58,7 @@ export interface Lab {
   max_grade: number;
   is_team: boolean;
   file_path: string | null;
+  subject_name?: string;
 }
 
 export interface LabSubmission {
@@ -70,4 +71,5 @@ export interface LabSubmission {
   comment: string | null;
   submission_date: string;
   team_members: string | null; // JSON string array of user IDs
+  submitter_name?: string;
 }

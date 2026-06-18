@@ -152,4 +152,71 @@ router.post("/gradebook/grade", (req: AuthenticatedRequest, res: Response): void
   }
 });
 
+// GET /api/teacher/gradebook/check-lateness/:lessonId
+router.get("/gradebook/check-lateness/:lessonId", (req: AuthenticatedRequest, res: Response): void => {
+  try {
+    const { lessonId } = req.params;
+
+    const lesson = db.prepare("SELECT * FROM lessons WHERE id = ?").get(lessonId) as any;
+    if (!lesson) {
+      res.status(404).json({ error: "Lesson not found." });
+      return;
+    }
+
+    // Determine day of week for the lesson date (1 = Monday, 7 = Sunday)
+    const dateObj = new Date(lesson.date);
+    let dayOfWeek = dateObj.getDay(); // 0 = Sunday, 1 = Monday...
+    if (dayOfWeek === 0) dayOfWeek = 7;
+
+    const schedule = db.prepare(`
+      SELECT start_time, end_time FROM schedule
+      WHERE group_id = ? AND subject_id = ? AND day_of_week = ?
+    `).get(lesson.group_id, lesson.subject_id, dayOfWeek) as any;
+
+    if (!schedule) {
+      res.json({ isToday: false, isLate: false, reason: "No schedule entry for this weekday." });
+      return;
+    }
+
+    // Compare with current local time
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = String(now.getMonth() + 1).padStart(2, "0");
+    const currentDateStr = String(now.getDate()).padStart(2, "0");
+    const todayStr = `${currentYear}-${currentMonth}-${currentDateStr}`;
+
+    const isToday = lesson.date === todayStr;
+
+    if (!isToday) {
+      res.json({ isToday: false, isLate: false, reason: "Lesson date is not today." });
+      return;
+    }
+
+    const currentHours = now.getHours();
+    const currentMinutes = now.getMinutes();
+    const currentTotalMinutes = currentHours * 60 + currentMinutes;
+
+    const [startH, startM] = schedule.start_time.split(":").map(Number);
+    const startTotalMinutes = startH * 60 + startM;
+
+    const [endH, endM] = schedule.end_time.split(":").map(Number);
+    const endTotalMinutes = endH * 60 + endM;
+
+    // A student is late if current time is 15 minutes or more after start_time,
+    // and before end_time (meaning the lesson is active right now)
+    const isLate = currentTotalMinutes >= startTotalMinutes + 15 && currentTotalMinutes <= endTotalMinutes;
+
+    res.json({
+      isToday: true,
+      startTime: schedule.start_time,
+      currentTime: `${String(currentHours).padStart(2, "0")}:${String(currentMinutes).padStart(2, "0")}`,
+      isLate,
+      reason: isLate ? "Student checked in 15+ minutes after class started." : "Student checked in on time."
+    });
+  } catch (error) {
+    console.error("Error checking lateness:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

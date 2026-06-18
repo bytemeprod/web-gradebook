@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import Layout from "../../components/Layout.tsx";
 import { api } from "../../api/client.ts";
-import { Subject, Lesson, Grade, Lab, LabSubmission } from "../../types/index.ts";
-import { Calendar, Award, BookOpen, Clock, FileText, CheckCircle, AlertCircle } from "lucide-react";
+import type { Subject, Lesson, Grade, Lab, LabSubmission } from "../../types/index.ts";
+import { Calendar, Award, Clock, FileText, CheckCircle, AlertCircle } from "lucide-react";
 
 const StudentSubject: React.FC = () => {
   const { subjectId } = useParams<{ subjectId: string }>();

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Layout from "../../components/Layout.tsx";
 import { api } from "../../api/client.ts";
-import { ScheduleEntry, Group, Subject } from "../../types/index.ts";
+import type { ScheduleEntry, Group, Subject } from "../../types/index.ts";
 import { Clock, MapPin, Users, CalendarDays, BookOpen, GraduationCap } from "lucide-react";
 
 const DAYS_OF_WEEK = [

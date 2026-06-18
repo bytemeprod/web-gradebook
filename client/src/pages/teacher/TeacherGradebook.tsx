@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import Layout from "../../components/Layout.tsx";
 import { api } from "../../api/client.ts";
-import { Group, Subject, User as Student, Lesson, Grade } from "../../types/index.ts";
-import { BookOpen, HelpCircle } from "lucide-react";
+import type { Group, Subject, User as Student, Lesson, Grade } from "../../types/index.ts";
+import { BookOpen } from "lucide-react";
 
 const TeacherGradebook: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -19,6 +19,7 @@ const TeacherGradebook: React.FC = () => {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
   const [hoveredLessonId, setHoveredLessonId] = useState<string | null>(null);
+  const [latenessInfo, setLatenessInfo] = useState<{ isToday: boolean; isLate: boolean; startTime?: string; currentTime?: string; reason?: string } | null>(null);
 
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
@@ -104,6 +105,22 @@ const TeacherGradebook: React.FC = () => {
     currentGrade: string;
   } | null>(null);
   const [inputValue, setInputValue] = useState("");
+
+  useEffect(() => {
+    if (!selectedCell) {
+      setLatenessInfo(null);
+      return;
+    }
+    const checkLateness = async () => {
+      try {
+        const data = await api.get(`/api/teacher/gradebook/check-lateness/${selectedCell.lessonId}`);
+        setLatenessInfo(data);
+      } catch (err) {
+        console.error("Failed to check lateness:", err);
+      }
+    };
+    checkLateness();
+  }, [selectedCell]);
 
   const updateGrade = async (studentId: string, lessonId: string, value: string) => {
     try {
@@ -253,8 +270,8 @@ const TeacherGradebook: React.FC = () => {
                   </thead>
                   <tbody>
                     {students.map(student => {
-                      const isExpelled = student.is_expelled === 1;
-                      const isNew = student.is_new === 1;
+                      const isExpelled = !!student.is_expelled;
+                      const isNew = !!student.is_new;
                       let rowClass = "";
                       if (isExpelled) rowClass = "row-expelled";
                       else if (isNew) rowClass = "row-new";
@@ -331,13 +348,50 @@ const TeacherGradebook: React.FC = () => {
 
       {/* Grade Entry Modal */}
       {selectedCell && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0, 0, 0, 0.6)", z-index: 1000, display: "flex", alignItems: "center", justify-content: "center", backdropFilter: "blur(4px)" }}>
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0, 0, 0, 0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
           <div className="glass-panel" style={{ width: "340px", padding: "24px", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "var(--radius-md)" }}>
             <h3 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "4px" }}>Выставить оценку</h3>
             <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "16px" }}>
               Студент: <b>{selectedCell.studentName}</b><br/>
               Дата: {selectedCell.lessonDate.split("-").reverse().join(".")}
             </p>
+
+            {latenessInfo && latenessInfo.isToday && (
+              <div style={{
+                background: latenessInfo.isLate ? "rgba(239, 68, 68, 0.1)" : "rgba(16, 185, 129, 0.1)",
+                border: `1px solid ${latenessInfo.isLate ? "rgba(239, 68, 68, 0.2)" : "rgba(16, 185, 129, 0.2)"}`,
+                borderRadius: "var(--radius-sm)",
+                padding: "10px",
+                marginBottom: "16px",
+                fontSize: "12px",
+                color: latenessInfo.isLate ? "var(--color-danger)" : "var(--color-success)"
+              }}>
+                <div><b>Проверка опоздания:</b></div>
+                <div style={{ marginTop: "4px" }}>{latenessInfo.reason}</div>
+                {latenessInfo.isLate && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInputValue("О");
+                      updateGrade(selectedCell.studentId, selectedCell.lessonId, "О");
+                    }}
+                    style={{
+                      marginTop: "8px",
+                      width: "100%",
+                      padding: "6px",
+                      background: "var(--grade-late)",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      fontWeight: "bold",
+                      cursor: "pointer"
+                    }}
+                  >
+                    Отметить опоздание (О)
+                  </button>
+                )}
+              </div>
+            )}
 
             <form onSubmit={(e) => { e.preventDefault(); updateGrade(selectedCell.studentId, selectedCell.lessonId, inputValue); }}>
               <div style={{ marginBottom: "16px" }}>

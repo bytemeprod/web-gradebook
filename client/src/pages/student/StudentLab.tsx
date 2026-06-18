@@ -2,8 +2,9 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import Layout from "../../components/Layout.tsx";
 import { api } from "../../api/client.ts";
-import { Lab, LabSubmission } from "../../types/index.ts";
-import { Calendar, Award, BookOpen, Clock, FileText, CheckCircle, AlertCircle, ArrowLeft, Users, Download, MessageSquare } from "lucide-react";
+import type { Lab, LabSubmission } from "../../types/index.ts";
+import { Calendar, Award, Clock, FileText, CheckCircle, ArrowLeft, Users, Download, MessageSquare } from "lucide-react";
+import { useAuth } from "../../context/AuthContext.tsx";
 
 interface Classmate {
   id: string;
@@ -11,6 +12,7 @@ interface Classmate {
 }
 
 const StudentLab: React.FC = () => {
+  const { user } = useAuth();
   const { labId } = useParams<{ labId: string }>();
   const [lab, setLab] = useState<Lab | null>(null);
   const [submission, setSubmission] = useState<LabSubmission | null>(null);
@@ -384,7 +386,7 @@ const StudentLab: React.FC = () => {
                         </div>
                       )}
 
-                      {lab.is_team === 1 && (
+                      {!!lab.is_team && (
                         <div style={{ marginBottom: "16px" }}>
                           <label className="form-label" style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px" }}>
                             Выбор напарника (Командная работа)
@@ -466,7 +468,7 @@ const StudentLab: React.FC = () => {
                     <span style={{ color: "var(--text-muted)" }}>Тип работы:</span>
                     <span style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
                       <Users size={14} />
-                      {lab.is_team === 1 ? "Командная" : "Индивидуальная"}
+                      {lab.is_team ? "Командная" : "Индивидуальная"}
                     </span>
                   </div>
                 </div>
