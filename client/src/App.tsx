@@ -11,7 +11,7 @@ import StudentLab from "./pages/student/StudentLab.tsx";
 import TeacherHome from "./pages/teacher/TeacherHome.tsx";
 import TeacherGradebook from "./pages/teacher/TeacherGradebook.tsx";
 import TeacherProgram from "./pages/teacher/TeacherProgram.tsx";
-const TeacherSubmissionsPlaceholder = () => <div><h1>Сдача лабораторных</h1></div>;
+import TeacherSubmissions from "./pages/teacher/TeacherSubmissions.tsx";
 
 const RootRedirect: React.FC = () => {
   const { user } = useAuth();
@@ -45,7 +45,7 @@ const App: React.FC = () => {
             <Route path="/teacher" element={<TeacherHome />} />
             <Route path="/teacher/gradebook" element={<TeacherGradebook />} />
             <Route path="/teacher/program/:subjectId" element={<TeacherProgram />} />
-            <Route path="/teacher/submissions" element={<TeacherSubmissionsPlaceholder />} />
+            <Route path="/teacher/submissions" element={<TeacherSubmissions />} />
           </Route>
 
           {/* Fallback */}
