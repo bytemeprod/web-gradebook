@@ -20,6 +20,10 @@ const TeacherGradebook: React.FC = () => {
   const [grades, setGrades] = useState<Grade[]>([]);
   const [hoveredLessonId, setHoveredLessonId] = useState<string | null>(null);
   const [latenessInfo, setLatenessInfo] = useState<{ isToday: boolean; isLate: boolean; startTime?: string; currentTime?: string; reason?: string } | null>(null);
+  const [showAddLessonModal, setShowAddLessonModal] = useState(false);
+  const [newLessonDate, setNewLessonDate] = useState(new Date().toISOString().split("T")[0]);
+  const [newLessonTitle, setNewLessonTitle] = useState("");
+  const [addingLesson, setAddingLesson] = useState(false);
 
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
@@ -153,6 +157,34 @@ const TeacherGradebook: React.FC = () => {
     await updateGrade(studentId, lessonId, nextValue);
   };
 
+  const handleAddLesson = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedGroupId || !selectedSubjectId || !newLessonDate) return;
+    setAddingLesson(true);
+    try {
+      const response = await api.post("/api/teacher/gradebook/lesson", {
+        groupId: selectedGroupId,
+        subjectId: selectedSubjectId,
+        date: newLessonDate,
+        title: newLessonTitle
+      });
+
+      // Add the new lesson to the lessons state, sorted by date
+      setLessons((prev) => {
+        const updated = [...prev, response.lesson];
+        return updated.sort((a, b) => a.date.localeCompare(b.date));
+      });
+
+      setShowAddLessonModal(false);
+      setNewLessonTitle("");
+    } catch (err: any) {
+      console.error("Failed to add lesson:", err);
+      alert(err.message || "Ошибка при создании занятия.");
+    } finally {
+      setAddingLesson(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="teacher-gradebook">
@@ -235,6 +267,21 @@ const TeacherGradebook: React.FC = () => {
               </select>
             </div>
           </div>
+
+          <button 
+            type="button"
+            onClick={() => setShowAddLessonModal(true)}
+            className="submit-btn"
+            style={{ 
+              padding: "8px 16px", 
+              fontSize: "13px",
+              width: "auto",
+              margin: 0
+            }}
+            disabled={loadingConfig || !selectedGroupId || !selectedSubjectId}
+          >
+            + Добавить занятие
+          </button>
         </div>
 
         {/* Gradebook Grid */}
@@ -459,6 +506,61 @@ const TeacherGradebook: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedCell(null)}
+                  style={{ flex: 1, padding: "10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-color)", background: "var(--bg-primary)", cursor: "pointer", fontWeight: "600", fontSize: "13px" }}
+                >
+                  Отмена
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Lesson Modal */}
+      {showAddLessonModal && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0, 0, 0, 0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
+          <div className="glass-panel" style={{ width: "360px", padding: "24px", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "var(--radius-md)" }}>
+            <h3 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "16px" }}>Новое занятие (колонка)</h3>
+            
+            <form onSubmit={handleAddLesson}>
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px", color: "var(--text-secondary)" }}>
+                  Дата занятия
+                </label>
+                <input
+                  type="date"
+                  value={newLessonDate}
+                  onChange={(e) => setNewLessonDate(e.target.value)}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "var(--radius-sm)", background: "var(--bg-primary)", border: "1px solid var(--border-color)", color: "var(--text-primary)" }}
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px", color: "var(--text-secondary)" }}>
+                  Тема занятия (необязательно)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Например, Лекция 1 или Практика"
+                  value={newLessonTitle}
+                  onChange={(e) => setNewLessonTitle(e.target.value)}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "var(--radius-sm)", background: "var(--bg-primary)", border: "1px solid var(--border-color)", color: "var(--text-primary)" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  type="submit"
+                  disabled={addingLesson}
+                  style={{ flex: 1, padding: "10px", borderRadius: "var(--radius-sm)", border: "none", background: "var(--color-primary)", color: "white", cursor: "pointer", fontWeight: "600", fontSize: "13px" }}
+                >
+                  {addingLesson ? "Создание..." : "Создать"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddLessonModal(false)}
+                  disabled={addingLesson}
                   style={{ flex: 1, padding: "10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-color)", background: "var(--bg-primary)", cursor: "pointer", fontWeight: "600", fontSize: "13px" }}
                 >
                   Отмена
