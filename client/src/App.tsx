@@ -8,8 +8,8 @@ import StudentHome from "./pages/student/StudentHome.tsx";
 import StudentGradebook from "./pages/student/StudentGradebook.tsx";
 import StudentSubject from "./pages/student/StudentSubject.tsx";
 import StudentLab from "./pages/student/StudentLab.tsx";
+import TeacherHome from "./pages/teacher/TeacherHome.tsx";
 
-const TeacherHomePlaceholder = () => <div><h1>Кабинет преподавателя</h1><p>Расписание преподавателя</p></div>;
 const TeacherGradebookPlaceholder = () => <div><h1>Журнал оценок группы</h1></div>;
 const TeacherProgramPlaceholder = () => <div><h1>Программа по предмету</h1></div>;
 const TeacherSubmissionsPlaceholder = () => <div><h1>Сдача лабораторных</h1></div>;
@@ -43,7 +43,7 @@ const App: React.FC = () => {
 
           {/* Teacher Routes */}
           <Route element={<ProtectedRoute allowedRoles={["teacher"]} />}>
-            <Route path="/teacher" element={<TeacherHomePlaceholder />} />
+            <Route path="/teacher" element={<TeacherHome />} />
             <Route path="/teacher/gradebook" element={<TeacherGradebookPlaceholder />} />
             <Route path="/teacher/program/:subjectId" element={<TeacherProgramPlaceholder />} />
             <Route path="/teacher/submissions" element={<TeacherSubmissionsPlaceholder />} />
