@@ -368,18 +368,20 @@ router.get("/submissions", (req: AuthenticatedRequest, res: Response): void => {
 router.post("/submissions/:submissionId/grade", (req: AuthenticatedRequest, res: Response): void => {
   try {
     const { submissionId } = req.params;
-    const { grade, comment } = req.body;
+    const { grade, comment, partnerId } = req.body;
 
     if (grade === undefined || grade === null) {
       res.status(400).json({ error: "Grade is required." });
       return;
     }
 
+    const teamMembers = partnerId ? JSON.stringify([partnerId]) : null;
+
     db.prepare(`
       UPDATE lab_submissions
-      SET grade = ?, comment = ?
+      SET grade = ?, comment = ?, team_members = ?
       WHERE id = ?
-    `).run(Number(grade), comment || null, submissionId);
+    `).run(Number(grade), comment || null, teamMembers, submissionId);
 
     res.json({ message: "Submission graded successfully." });
   } catch (error) {

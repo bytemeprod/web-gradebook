@@ -18,6 +18,7 @@ const TeacherSubmissions: React.FC = () => {
   const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
   const [gradeValue, setGradeValue] = useState("");
   const [feedbackComment, setFeedbackComment] = useState("");
+  const [selectedPartnerId, setSelectedPartnerId] = useState("");
   const [submittingGrade, setSubmittingGrade] = useState(false);
 
   const fetchSubmissions = async () => {
@@ -41,6 +42,21 @@ const TeacherSubmissions: React.FC = () => {
     setSelectedSubmission(sub);
     setGradeValue(sub.grade !== null && sub.grade !== undefined ? String(sub.grade) : "");
     setFeedbackComment(sub.comment || "");
+    
+    if (sub.team_members) {
+      try {
+        const ids = JSON.parse(sub.team_members);
+        if (Array.isArray(ids) && ids.length > 0) {
+          setSelectedPartnerId(ids[0]);
+        } else {
+          setSelectedPartnerId("");
+        }
+      } catch (e) {
+        setSelectedPartnerId("");
+      }
+    } else {
+      setSelectedPartnerId("");
+    }
   };
 
   const handleGradeSubmit = async (e: React.FormEvent) => {
@@ -55,16 +71,19 @@ const TeacherSubmissions: React.FC = () => {
 
     setSubmittingGrade(true);
     try {
+      const nextTeamMembers = selectedPartnerId ? JSON.stringify([selectedPartnerId]) : null;
+
       await api.post(`/api/teacher/submissions/${selectedSubmission.id}/grade`, {
         grade: parsedGrade,
-        comment: feedbackComment
+        comment: feedbackComment,
+        partnerId: selectedPartnerId || null
       });
 
       // Update locally
       setSubmissions((prev) =>
         prev.map((sub) =>
           sub.id === selectedSubmission.id
-            ? { ...sub, grade: parsedGrade, comment: feedbackComment }
+            ? { ...sub, grade: parsedGrade, comment: feedbackComment, team_members: nextTeamMembers }
             : sub
         )
       );
@@ -305,6 +324,28 @@ const TeacherSubmissions: React.FC = () => {
             </div>
 
             <form onSubmit={handleGradeSubmit}>
+              {selectedSubmission.lab_is_team === 1 && (
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px", color: "var(--text-secondary)" }}>
+                    Напарник (командная работа)
+                  </label>
+                  <select
+                    className="form-input"
+                    value={selectedPartnerId}
+                    onChange={(e) => setSelectedPartnerId(e.target.value)}
+                    style={{ width: "100%", padding: "10px", borderRadius: "var(--radius-sm)", background: "var(--bg-primary)", border: "1px solid var(--border-color)", color: "var(--text-primary)" }}
+                  >
+                    <option value="">Выберите напарника...</option>
+                    {students
+                      .filter((s) => s.id !== selectedSubmission.student_id)
+                      .map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
               <div style={{ marginBottom: "16px" }}>
                 <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px", color: "var(--text-secondary)" }}>
                   Оценка за работу (макс. {selectedSubmission.lab_max_grade} б.)
