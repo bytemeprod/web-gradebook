@@ -285,4 +285,62 @@ router.post("/lab/:labId/submit", async (req: AuthenticatedRequest, res: Respons
   }
 });
 
+// GET /api/student/submissions/:submissionId/comments
+router.get("/submissions/:submissionId/comments", (req: AuthenticatedRequest, res: Response): void => {
+  try {
+    const { submissionId } = req.params;
+
+    const comments = db.prepare(`
+      SELECT c.id, c.content, c.created_at, c.author_id, u.name as author_name, u.role as author_role
+      FROM comments c
+      JOIN users u ON c.author_id = u.id
+      WHERE c.submission_id = ?
+      ORDER BY c.created_at ASC
+    `).all(submissionId);
+
+    res.json({ comments });
+  } catch (error) {
+    console.error("Error fetching comments:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/student/submissions/:submissionId/comments
+router.post("/submissions/:submissionId/comments", (req: AuthenticatedRequest, res: Response): void => {
+  try {
+    const { submissionId } = req.params;
+    const { content } = req.body;
+    const authorId = req.user?.id;
+
+    if (!content) {
+      res.status(400).json({ error: "Content is required." });
+      return;
+    }
+
+    const commentId = uuidv4();
+
+    db.prepare(`
+      INSERT INTO comments (id, submission_id, author_id, content)
+      VALUES (?, ?, ?, ?)
+    `).run(commentId, submissionId, authorId, content);
+
+    const userRow = db.prepare("SELECT name FROM users WHERE id = ?").get(authorId) as { name: string } | undefined;
+    const authorName = userRow?.name || "Студент";
+
+    const newComment = {
+      id: commentId,
+      content,
+      created_at: new Date().toISOString(),
+      author_id: authorId,
+      author_name: authorName,
+      author_role: "student"
+    };
+
+    res.status(201).json({ message: "Comment added successfully.", comment: newComment });
+  } catch (error) {
+    console.error("Error adding comment:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

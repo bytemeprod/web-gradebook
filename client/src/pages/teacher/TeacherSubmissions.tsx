@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import Layout from "../../components/Layout.tsx";
 import { api } from "../../api/client.ts";
-import { Calendar, FileText, Download, CheckCircle, AlertCircle } from "lucide-react";
+import { Calendar, FileText, Download, CheckCircle, AlertCircle, MessageSquare } from "lucide-react";
+import { useAuth } from "../../context/AuthContext.tsx";
 
 interface Submitter {
   id: string;
@@ -9,6 +10,7 @@ interface Submitter {
 }
 
 const TeacherSubmissions: React.FC = () => {
+  const { user } = useAuth();
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [students, setStudents] = useState<Submitter[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +22,43 @@ const TeacherSubmissions: React.FC = () => {
   const [feedbackComment, setFeedbackComment] = useState("");
   const [selectedPartnerId, setSelectedPartnerId] = useState("");
   const [submittingGrade, setSubmittingGrade] = useState(false);
+  const [comments, setComments] = useState<any[]>([]);
+  const [newCommentText, setNewCommentText] = useState("");
+
+  const fetchComments = async (subId: string) => {
+    try {
+      const data = await api.get(`/api/teacher/submissions/${subId}/comments`);
+      setComments(data.comments || []);
+    } catch (e) {
+      console.error("Failed to load comments", e);
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedSubmission) {
+      setComments([]);
+      return;
+    }
+    fetchComments(selectedSubmission.id);
+    const interval = setInterval(() => {
+      fetchComments(selectedSubmission.id);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [selectedSubmission?.id]);
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCommentText.trim() || !selectedSubmission) return;
+    try {
+      const data = await api.post(`/api/teacher/submissions/${selectedSubmission.id}/comments`, {
+        content: newCommentText
+      });
+      setComments((prev) => [...prev, data.comment]);
+      setNewCommentText("");
+    } catch (err) {
+      console.error("Failed to post comment", err);
+    }
+  };
 
   const fetchSubmissions = async () => {
     try {
@@ -296,7 +335,7 @@ const TeacherSubmissions: React.FC = () => {
       {/* Grading Modal */}
       {selectedSubmission && (
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0, 0, 0, 0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
-          <div className="glass-panel" style={{ width: "420px", padding: "24px", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "var(--radius-md)" }}>
+          <div className="glass-panel" style={{ width: "550px", maxHeight: "90vh", overflowY: "auto", padding: "24px", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "var(--radius-md)" }}>
             <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "6px" }}>Проверка решения</h3>
             <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "16px" }}>
               Работа: <b>{selectedSubmission.lab_title}</b> ({selectedSubmission.subject_name})<br />
@@ -395,6 +434,66 @@ const TeacherSubmissions: React.FC = () => {
                 </button>
               </div>
             </form>
+
+            {/* Chat Section */}
+            <div style={{ marginTop: "24px", borderTop: "1px solid var(--border-color)", paddingTop: "20px" }}>
+              <h3 style={{ fontSize: "15px", fontWeight: "600", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <MessageSquare size={16} />
+                <span>Обсуждение работы ({comments.length})</span>
+              </h3>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "180px", overflowY: "auto", marginBottom: "12px", padding: "10px", background: "var(--bg-primary)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-color)" }}>
+                {comments.length > 0 ? (
+                  comments.map((c) => {
+                    const isMe = c.author_id === user?.id;
+                    return (
+                      <div key={c.id} style={{ 
+                        alignSelf: isMe ? "flex-end" : "flex-start",
+                        background: isMe ? "rgba(99, 102, 241, 0.15)" : "var(--bg-secondary)",
+                        border: isMe ? "1px solid rgba(99, 102, 241, 0.25)" : "1px solid var(--border-color)",
+                        padding: "6px 10px",
+                        borderRadius: "12px",
+                        maxWidth: "85%",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "2px"
+                      }}>
+                        <div style={{ fontSize: "10px", fontWeight: "700", color: isMe ? "var(--color-primary)" : "var(--text-secondary)" }}>
+                          {c.author_name} {c.author_role === "student" ? "(Студент)" : ""}
+                        </div>
+                        <div style={{ fontSize: "12px", color: "var(--text-primary)", wordBreak: "break-word" }}>
+                          {c.content}
+                        </div>
+                        <div style={{ fontSize: "9px", color: "var(--text-muted)", alignSelf: "flex-end" }}>
+                          {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "15px 0", fontSize: "12px" }}>
+                    Напишите первый комментарий студенту для обсуждения решения.
+                  </div>
+                )}
+              </div>
+
+              <form onSubmit={handleAddComment} style={{ display: "flex", gap: "8px" }}>
+                <input
+                  type="text"
+                  placeholder="Напишите сообщение..."
+                  value={newCommentText}
+                  onChange={(e) => setNewCommentText(e.target.value)}
+                  style={{ flex: 1, padding: "8px 12px", borderRadius: "var(--radius-sm)", background: "var(--bg-primary)", border: "1px solid var(--border-color)", color: "var(--text-primary)", fontSize: "12px" }}
+                />
+                <button
+                  type="submit"
+                  className="submit-btn"
+                  style={{ width: "auto", margin: 0, padding: "0 16px", fontSize: "12px" }}
+                >
+                  Отправить
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       )}

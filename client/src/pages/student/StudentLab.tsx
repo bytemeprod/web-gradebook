@@ -27,6 +27,8 @@ const StudentLab: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [comments, setComments] = useState<any[]>([]);
+  const [newCommentText, setNewCommentText] = useState("");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -77,6 +79,41 @@ const StudentLab: React.FC = () => {
       console.error("Submit execution failed:", err);
       setUploadError(err.message || "Ошибка при отправке.");
       setSubmitting(false);
+    }
+  };
+
+  const fetchComments = async (subId: string) => {
+    try {
+      const data = await api.get(`/api/student/submissions/${subId}/comments`);
+      setComments(data.comments || []);
+    } catch (e) {
+      console.error("Failed to load comments", e);
+    }
+  };
+
+  useEffect(() => {
+    if (!submission) {
+      setComments([]);
+      return;
+    }
+    fetchComments(submission.id);
+    const interval = setInterval(() => {
+      fetchComments(submission.id);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [submission?.id]);
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCommentText.trim() || !submission) return;
+    try {
+      const data = await api.post(`/api/student/submissions/${submission.id}/comments`, {
+        content: newCommentText
+      });
+      setComments((prev) => [...prev, data.comment]);
+      setNewCommentText("");
+    } catch (err) {
+      console.error("Failed to post comment", err);
     }
   };
 
@@ -439,6 +476,68 @@ const StudentLab: React.FC = () => {
                         {submitting ? "Отправка..." : "Отправить решение"}
                       </button>
                     </form>
+                  )}
+
+                  {/* Chat Section */}
+                  {submission && (
+                    <div style={{ marginTop: "28px", borderTop: "1px solid var(--border-color)", paddingTop: "24px" }}>
+                      <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <MessageSquare size={18} />
+                        <span>Обсуждение работы ({comments.length})</span>
+                      </h3>
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "200px", overflowY: "auto", marginBottom: "16px", padding: "12px", background: "var(--bg-primary)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-color)" }}>
+                        {comments.length > 0 ? (
+                          comments.map((c) => {
+                            const isMe = c.author_id === user?.id;
+                            return (
+                              <div key={c.id} style={{ 
+                                alignSelf: isMe ? "flex-end" : "flex-start",
+                                background: isMe ? "rgba(99, 102, 241, 0.15)" : "var(--bg-secondary)",
+                                border: isMe ? "1px solid rgba(99, 102, 241, 0.25)" : "1px solid var(--border-color)",
+                                padding: "8px 12px",
+                                borderRadius: "12px",
+                                maxWidth: "80%",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "2px"
+                              }}>
+                                <div style={{ fontSize: "11px", fontWeight: "700", color: isMe ? "var(--color-primary)" : "var(--text-secondary)" }}>
+                                  {c.author_name} {c.author_role === "teacher" ? "(Преподаватель)" : ""}
+                                </div>
+                                <div style={{ fontSize: "13px", color: "var(--text-primary)", wordBreak: "break-word" }}>
+                                  {c.content}
+                                </div>
+                                <div style={{ fontSize: "9px", color: "var(--text-muted)", alignSelf: "flex-end" }}>
+                                  {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "20px 0", fontSize: "13px" }}>
+                            Напишите первый комментарий преподавателю для обсуждения решения.
+                          </div>
+                        )}
+                      </div>
+
+                      <form onSubmit={handleAddComment} style={{ display: "flex", gap: "10px" }}>
+                        <input
+                          type="text"
+                          placeholder="Напишите сообщение..."
+                          value={newCommentText}
+                          onChange={(e) => setNewCommentText(e.target.value)}
+                          style={{ flex: 1, padding: "10px 14px", borderRadius: "var(--radius-sm)", background: "var(--bg-primary)", border: "1px solid var(--border-color)", color: "var(--text-primary)", fontSize: "13px" }}
+                        />
+                        <button
+                          type="submit"
+                          className="submit-btn"
+                          style={{ width: "auto", margin: 0, padding: "0 20px", fontSize: "13px" }}
+                        >
+                          Отправить
+                        </button>
+                      </form>
+                    </div>
                   )}
                 </div>
               </div>
