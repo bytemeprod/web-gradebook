@@ -3,21 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import PublicRoute from "./components/PublicRoute.tsx";
-
-// Placeholder Components (will be replaced by actual pages in subsequent commits)
-const LoginPlaceholder = () => {
-  const { login } = useAuth();
-  const handleLogin = (role: "student" | "teacher") => {
-    login(role === "student" ? "student1" : "teacher1", "password");
-  };
-  return (
-    <div style={{ padding: 24, textAlign: "center" }}>
-      <h1>Вход в систему (Заглушка)</h1>
-      <button onClick={() => handleLogin("student")} style={{ margin: 8, padding: "8px 16px" }}>Войти как Студент</button>
-      <button onClick={() => handleLogin("teacher")} style={{ margin: 8, padding: "8px 16px" }}>Войти как Преподаватель</button>
-    </div>
-  );
-};
+import Login from "./pages/Login.tsx";
 
 const StudentHomePlaceholder = () => <div><h1>Личный кабинет студента</h1><p>Расписание</p></div>;
 const StudentGradebookPlaceholder = () => <div><h1>Электронный журнал студента</h1></div>;
@@ -40,7 +26,7 @@ const App: React.FC = () => {
         <Routes>
           {/* Public Routes */}
           <Route element={<PublicRoute />}>
-            <Route path="/login" element={<LoginPlaceholder />} />
+            <Route path="/login" element={<Login />} />
           </Route>
 
           {/* Root Redirect */}
