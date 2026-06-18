@@ -10,8 +10,7 @@ import StudentSubject from "./pages/student/StudentSubject.tsx";
 import StudentLab from "./pages/student/StudentLab.tsx";
 import TeacherHome from "./pages/teacher/TeacherHome.tsx";
 import TeacherGradebook from "./pages/teacher/TeacherGradebook.tsx";
-
-const TeacherProgramPlaceholder = () => <div><h1>Программа по предмету</h1></div>;
+import TeacherProgram from "./pages/teacher/TeacherProgram.tsx";
 const TeacherSubmissionsPlaceholder = () => <div><h1>Сдача лабораторных</h1></div>;
 
 const RootRedirect: React.FC = () => {
@@ -45,7 +44,7 @@ const App: React.FC = () => {
           <Route element={<ProtectedRoute allowedRoles={["teacher"]} />}>
             <Route path="/teacher" element={<TeacherHome />} />
             <Route path="/teacher/gradebook" element={<TeacherGradebook />} />
-            <Route path="/teacher/program/:subjectId" element={<TeacherProgramPlaceholder />} />
+            <Route path="/teacher/program/:subjectId" element={<TeacherProgram />} />
             <Route path="/teacher/submissions" element={<TeacherSubmissionsPlaceholder />} />
           </Route>
 

@@ -2,6 +2,13 @@ import { Router, Response } from "express";
 import db from "../db/db.ts";
 import { authMiddleware, AuthenticatedRequest, requireRole } from "../middleware/auth.ts";
 import { v4 as uuidv4 } from "uuid";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const UPLOADS_DIR = path.resolve(__dirname, "../../../uploads");
 
 const router = Router();
 
@@ -240,8 +247,91 @@ router.post("/gradebook/lesson", (req: AuthenticatedRequest, res: Response): voi
         title: title || null
       }
     });
+// GET /api/teacher/subject/:subjectId/labs
+router.get("/subject/:subjectId/labs", (req: AuthenticatedRequest, res: Response): void => {
+  try {
+    const { subjectId } = req.params;
+
+    const labs = db.prepare(`
+      SELECT * FROM labs
+      WHERE subject_id = ?
+      ORDER BY deadline ASC
+    `).all(subjectId);
+
+    res.json({ labs });
   } catch (error) {
-    console.error("Error creating lesson:", error);
+    console.error("Error fetching subject labs:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/teacher/subject/:subjectId/labs
+router.post("/subject/:subjectId/labs", (req: AuthenticatedRequest, res: Response): void => {
+  try {
+    const { subjectId } = req.params;
+    const { title, description, deadline, maxGrade, isTeam, fileData, fileName } = req.body;
+
+    if (!title || !description || !deadline) {
+      res.status(400).json({ error: "Title, description, and deadline are required." });
+      return;
+    }
+
+    let publicFilePath: string | null = null;
+
+    if (fileData && fileName) {
+      // Ensure uploads directory exists
+      if (!fs.existsSync(UPLOADS_DIR)) {
+        fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+      }
+
+      // Decode base64 file
+      const matches = fileData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const base64Buffer = Buffer.from(matches[2], "base64");
+        const uniqueFileName = `lab-tk-${subjectId}-${Date.now()}-${fileName}`;
+        const filePath = path.join(UPLOADS_DIR, uniqueFileName);
+
+        // Write file
+        fs.writeFileSync(filePath, base64Buffer);
+        publicFilePath = `/uploads/${uniqueFileName}`;
+      }
+    }
+
+    const labId = uuidv4();
+    const isTeamInt = isTeam ? 1 : 0;
+
+    db.prepare(`
+      INSERT INTO labs (id, subject_id, title, description, deadline, max_grade, is_team, file_path)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(labId, subjectId, title, description, deadline, maxGrade || 10, isTeamInt, publicFilePath);
+
+    res.status(201).json({
+      message: "Lab created successfully.",
+      lab: {
+        id: labId,
+        subject_id: subjectId,
+        title,
+        description,
+        deadline,
+        max_grade: maxGrade || 10,
+        is_team: isTeamInt,
+        file_path: publicFilePath
+      }
+    });
+  } catch (error) {
+    console.error("Error creating subject lab:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// DELETE /api/teacher/labs/:labId
+router.delete("/labs/:labId", (req: AuthenticatedRequest, res: Response): void => {
+  try {
+    const { labId } = req.params;
+    db.prepare("DELETE FROM labs WHERE id = ?").run(labId);
+    res.json({ message: "Lab deleted successfully." });
+  } catch (error) {
+    console.error("Error deleting lab:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
