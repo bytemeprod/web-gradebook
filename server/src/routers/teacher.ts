@@ -2,13 +2,7 @@ import { Router, Response } from "express";
 import db from "../db/db.ts";
 import { authMiddleware, AuthenticatedRequest, requireRole } from "../middleware/auth.ts";
 import { v4 as uuidv4 } from "uuid";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const UPLOADS_DIR = path.resolve(__dirname, "../../../uploads");
+import { saveBase64File } from "../utils/uploader.ts";
 
 const router = Router();
 
@@ -220,6 +214,12 @@ router.get("/gradebook/check-lateness/:lessonId", (req: AuthenticatedRequest, re
       isLate,
       reason: isLate ? "Student checked in 15+ minutes after class started." : "Student checked in on time."
     });
+  } catch (error) {
+    console.error("Error checking lateness:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // POST /api/teacher/gradebook/lesson
 router.post("/gradebook/lesson", (req: AuthenticatedRequest, res: Response): void => {
   try {
@@ -247,6 +247,12 @@ router.post("/gradebook/lesson", (req: AuthenticatedRequest, res: Response): voi
         title: title || null
       }
     });
+  } catch (error) {
+    console.error("Error creating lesson:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /api/teacher/subject/:subjectId/labs
 router.get("/subject/:subjectId/labs", (req: AuthenticatedRequest, res: Response): void => {
   try {
@@ -279,21 +285,12 @@ router.post("/subject/:subjectId/labs", (req: AuthenticatedRequest, res: Respons
     let publicFilePath: string | null = null;
 
     if (fileData && fileName) {
-      // Ensure uploads directory exists
-      if (!fs.existsSync(UPLOADS_DIR)) {
-        fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-      }
-
-      // Decode base64 file
-      const matches = fileData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-      if (matches && matches.length === 3) {
-        const base64Buffer = Buffer.from(matches[2], "base64");
-        const uniqueFileName = `lab-tk-${subjectId}-${Date.now()}-${fileName}`;
-        const filePath = path.join(UPLOADS_DIR, uniqueFileName);
-
-        // Write file
-        fs.writeFileSync(filePath, base64Buffer);
-        publicFilePath = `/uploads/${uniqueFileName}`;
+      try {
+        const uploadResult = saveBase64File(fileData, `lab-tk-${subjectId}`, fileName);
+        publicFilePath = uploadResult.publicUrl;
+      } catch (err: any) {
+        res.status(400).json({ error: err.message || "Invalid base64 file data." });
+        return;
       }
     }
 
