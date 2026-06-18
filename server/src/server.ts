@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import authRouter from "./routers/auth.ts";
 import teacherRouter from "./routers/teacher.ts";
+import studentRouter from "./routers/student.ts";
 import { errorHandler } from "./middleware/error.ts";
 
 const app = express();
@@ -20,6 +21,7 @@ app.use(express.json());
 // Routes
 app.use("/api/auth", authRouter);
 app.use("/api/teacher", teacherRouter);
+app.use("/api/student", studentRouter);
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "Server is running" });
