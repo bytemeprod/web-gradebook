@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import Layout from "../../components/Layout.tsx";
 import { api } from "../../api/client.ts";
 import type { Group, Subject, User as Student, Lesson, Grade } from "../../types/index.ts";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Download } from "lucide-react";
 
 const TeacherGradebook: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -185,6 +185,43 @@ const TeacherGradebook: React.FC = () => {
     }
   };
 
+  const handleExportCSV = () => {
+    if (!students || students.length === 0) return;
+
+    // Header row: "Студент;[Date1];[Date2];..."
+    const header = ["Студент", ...lessons.map(l => l.date.split("-").reverse().join("."))].join(";");
+
+    // Rows for each student
+    const rows = students.map(student => {
+      const studentName = student.name;
+      const studentGrades = lessons.map(lesson => {
+        const grade = getStudentGrade(student.id, lesson.id);
+        return grade || "";
+      });
+      return [studentName, ...studentGrades].join(";");
+    });
+
+    // Combine headers and rows
+    const csvContent = "\uFEFF" + [header, ...rows].join("\n");
+
+    // Create a blob and download link
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    
+    // Construct filename: gradebook_[group_name]_[subject_name].csv
+    const groupName = groups.find(g => g.id === selectedGroupId)?.name || "group";
+    const subjectName = subjects.find(s => s.id === selectedSubjectId)?.name || "subject";
+    const filename = `gradebook_${groupName}_${subjectName}.csv`.replace(/\s+/g, "_");
+
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <Layout>
       <div className="teacher-gradebook">
@@ -268,20 +305,43 @@ const TeacherGradebook: React.FC = () => {
             </div>
           </div>
 
-          <button 
-            type="button"
-            onClick={() => setShowAddLessonModal(true)}
-            className="submit-btn"
-            style={{ 
-              padding: "8px 16px", 
-              fontSize: "13px",
-              width: "auto",
-              margin: 0
-            }}
-            disabled={loadingConfig || !selectedGroupId || !selectedSubjectId}
-          >
-            + Добавить занятие
-          </button>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button 
+              type="button"
+              onClick={handleExportCSV}
+              className="submit-btn"
+              style={{ 
+                padding: "8px 16.5px", 
+                fontSize: "13px",
+                width: "auto",
+                margin: 0,
+                background: "var(--bg-primary)",
+                color: "var(--text-primary)",
+                border: "1px solid var(--border-color)",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px"
+              }}
+              disabled={loadingConfig || students.length === 0}
+            >
+              <Download size={14} />
+              <span>Экспорт в CSV</span>
+            </button>
+            <button 
+              type="button"
+              onClick={() => setShowAddLessonModal(true)}
+              className="submit-btn"
+              style={{ 
+                padding: "8px 16px", 
+                fontSize: "13px",
+                width: "auto",
+                margin: 0
+              }}
+              disabled={loadingConfig || !selectedGroupId || !selectedSubjectId}
+            >
+              + Добавить занятие
+            </button>
+          </div>
         </div>
 
         {/* Gradebook Grid */}
