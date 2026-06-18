@@ -213,8 +213,35 @@ router.get("/gradebook/check-lateness/:lessonId", (req: AuthenticatedRequest, re
       isLate,
       reason: isLate ? "Student checked in 15+ minutes after class started." : "Student checked in on time."
     });
+// POST /api/teacher/gradebook/lesson
+router.post("/gradebook/lesson", (req: AuthenticatedRequest, res: Response): void => {
+  try {
+    const { groupId, subjectId, date, title } = req.body;
+
+    if (!groupId || !subjectId || !date) {
+      res.status(400).json({ error: "groupId, subjectId, and date are required." });
+      return;
+    }
+
+    const lessonId = uuidv4();
+
+    db.prepare(`
+      INSERT INTO lessons (id, group_id, subject_id, date, title)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(lessonId, groupId, subjectId, date, title || null);
+
+    res.status(201).json({
+      message: "Lesson created successfully.",
+      lesson: {
+        id: lessonId,
+        group_id: groupId,
+        subject_id: subjectId,
+        date,
+        title: title || null
+      }
+    });
   } catch (error) {
-    console.error("Error checking lateness:", error);
+    console.error("Error creating lesson:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
