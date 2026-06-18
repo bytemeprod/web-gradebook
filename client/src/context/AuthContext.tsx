@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { api } from "../api/client.ts";
 
 export interface User {
   id: string;
@@ -20,24 +21,60 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const checkSession = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      const data = await api.get("/api/auth/me");
+      if (data && data.user) {
+        setUser(data.user);
+      } else {
+        localStorage.removeItem("token");
+      }
+    } catch (error) {
+      console.error("Session check failed:", error);
+      localStorage.removeItem("token");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    checkSession();
+  }, []);
 
   const login = async (username: string, password: string) => {
-    // Stub implementation
-    console.log("Mock login for:", username);
-    const mockRole = username.includes("teacher") ? "teacher" : "student";
-    setUser({
-      id: "mock-id",
-      username,
-      name: username === "teacher1" ? "Иван Иванов" : "Петр Петров",
-      role: mockRole,
-      is_new: false,
-      is_expelled: false,
-    });
+    setLoading(true);
+    try {
+      const data = await api.post("/api/auth/login", { username, password });
+      if (data && data.token) {
+        localStorage.setItem("token", data.token);
+        setUser(data.user);
+      }
+    } catch (error) {
+      setUser(null);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = async () => {
-    setUser(null);
+    setLoading(true);
+    try {
+      await api.post("/api/auth/logout");
+    } catch (error) {
+      console.error("Logout request failed:", error);
+    } finally {
+      localStorage.removeItem("token");
+      setUser(null);
+      setLoading(false);
+    }
   };
 
   return (
