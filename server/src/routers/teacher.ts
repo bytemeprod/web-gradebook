@@ -1,6 +1,7 @@
 import { Router, Response } from "express";
 import db from "../db/db.ts";
 import { authMiddleware, AuthenticatedRequest, requireRole } from "../middleware/auth.ts";
+import { v4 as uuidv4 } from "uuid";
 
 const router = Router();
 
@@ -117,6 +118,36 @@ router.get("/gradebook", (req: AuthenticatedRequest, res: Response): void => {
     });
   } catch (error) {
     console.error("Error fetching teacher gradebook data:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/teacher/gradebook/grade
+router.post("/gradebook/grade", (req: AuthenticatedRequest, res: Response): void => {
+  try {
+    const { studentId, lessonId, grade } = req.body;
+
+    if (!studentId || !lessonId) {
+      res.status(400).json({ error: "studentId and lessonId are required." });
+      return;
+    }
+
+    if (grade === "" || grade === null || grade === undefined) {
+      // Clear grade
+      db.prepare("DELETE FROM grades WHERE student_id = ? AND lesson_id = ?").run(studentId, lessonId);
+      res.json({ message: "Grade cleared successfully." });
+    } else {
+      // Upsert grade
+      db.prepare(`
+        INSERT INTO grades (id, student_id, lesson_id, grade)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(student_id, lesson_id)
+        DO UPDATE SET grade = excluded.grade
+      `).run(uuidv4(), studentId, lessonId, String(grade));
+      res.json({ message: "Grade updated successfully." });
+    }
+  } catch (error) {
+    console.error("Error updating grade:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -96,6 +96,36 @@ const TeacherGradebook: React.FC = () => {
     return gradeObj ? gradeObj.grade : "";
   };
 
+  const [selectedCell, setSelectedCell] = useState<{
+    studentId: string;
+    lessonId: string;
+    studentName: string;
+    lessonDate: string;
+    currentGrade: string;
+  } | null>(null);
+  const [inputValue, setInputValue] = useState("");
+
+  const updateGrade = async (studentId: string, lessonId: string, value: string) => {
+    try {
+      await api.post("/api/teacher/gradebook/grade", {
+        studentId,
+        lessonId,
+        grade: value
+      });
+
+      // Update local state
+      setGrades((prev) => {
+        const filtered = prev.filter(g => !(g.student_id === studentId && g.lesson_id === lessonId));
+        if (value === "") return filtered;
+        return [...filtered, { id: "temp", student_id: studentId, lesson_id: lessonId, grade: value }];
+      });
+      setSelectedCell(null);
+    } catch (err: any) {
+      console.error("Failed to update grade:", err);
+      alert(err.message || "Ошибка при выставлении оценки.");
+    }
+  };
+
   return (
     <Layout>
       <div className="teacher-gradebook">
@@ -245,6 +275,17 @@ const TeacherGradebook: React.FC = () => {
                                 className={`grade-grid-cell ${valClass} ${hoveredLessonId === lesson.id ? "highlight-col" : ""}`}
                                 onMouseEnter={() => setHoveredLessonId(lesson.id)}
                                 onMouseLeave={() => setHoveredLessonId(null)}
+                                onClick={() => {
+                                  if (isExpelled) return;
+                                  setSelectedCell({
+                                    studentId: student.id,
+                                    lessonId: lesson.id,
+                                    studentName: student.name,
+                                    lessonDate: lesson.date,
+                                    currentGrade: val
+                                  });
+                                  setInputValue(val === "Н" || val === "О" ? "" : val);
+                                }}
                               >
                                 {val || "—"}
                               </td>
@@ -265,6 +306,70 @@ const TeacherGradebook: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Grade Entry Modal */}
+      {selectedCell && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0, 0, 0, 0.6)", z-index: 1000, display: "flex", alignItems: "center", justify-content: "center", backdropFilter: "blur(4px)" }}>
+          <div className="glass-panel" style={{ width: "340px", padding: "24px", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "var(--radius-md)" }}>
+            <h3 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "4px" }}>Выставить оценку</h3>
+            <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "16px" }}>
+              Студент: <b>{selectedCell.studentName}</b><br/>
+              Дата: {selectedCell.lessonDate.split("-").reverse().join(".")}
+            </p>
+
+            <form onSubmit={(e) => { e.preventDefault(); updateGrade(selectedCell.studentId, selectedCell.lessonId, inputValue); }}>
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: "600", marginBottom: "6px", color: "var(--text-secondary)" }}>
+                  Оценка с клавиатуры (только числа 1-10)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Оценка от 1 до 10"
+                  value={inputValue}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "" || (/^\d+$/.test(val) && parseInt(val) >= 1 && parseInt(val) <= 10)) {
+                      setInputValue(val);
+                    }
+                  }}
+                  style={{ width: "100%", padding: "10px", borderRadius: "var(--radius-sm)", background: "var(--bg-primary)", border: "1px solid var(--border-color)", color: "var(--text-primary)", fontWeight: "bold", textAlign: "center", fontSize: "16px" }}
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "8px", marginBottom: "16px" }}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => { setInputValue(String(num)); updateGrade(selectedCell.studentId, selectedCell.lessonId, String(num)); }}
+                    style={{ padding: "8px", fontSize: "13px", fontWeight: "bold", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-color)", background: "var(--bg-primary)", cursor: "pointer" }}
+                  >
+                    {num}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => updateGrade(selectedCell.studentId, selectedCell.lessonId, "")}
+                  style={{ flex: 1, padding: "10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-color)", background: "rgba(239, 68, 68, 0.1)", color: "var(--color-danger)", cursor: "pointer", fontWeight: "600", fontSize: "13px" }}
+                >
+                  Очистить
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCell(null)}
+                  style={{ flex: 1, padding: "10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-color)", background: "var(--bg-primary)", cursor: "pointer", fontWeight: "600", fontSize: "13px" }}
+                >
+                  Отмена
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };
