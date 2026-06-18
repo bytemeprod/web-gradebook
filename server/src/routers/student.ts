@@ -168,4 +168,59 @@ router.get("/subject/:subjectId", (req: AuthenticatedRequest, res: Response): vo
   }
 });
 
+// GET /api/student/lab/:labId
+router.get("/lab/:labId", (req: AuthenticatedRequest, res: Response): void => {
+  try {
+    const studentId = req.user?.id;
+    const { labId } = req.params;
+    const groupId = getStudentGroupId(studentId!);
+
+    if (!groupId) {
+      res.status(404).json({ error: "Student group not found." });
+      return;
+    }
+
+    const lab = db.prepare(`
+      SELECT l.id, l.subject_id, l.title, l.description, l.deadline, l.max_grade, l.is_team, l.file_path,
+             s.name as subject_name
+      FROM labs l
+      JOIN subjects s ON l.subject_id = s.id
+      WHERE l.id = ?
+    `).get(labId) as any;
+
+    if (!lab) {
+      res.status(404).json({ error: "Lab not found." });
+      return;
+    }
+
+    // Fetch this student's submission for this lab
+    const submission = db.prepare(`
+      SELECT id, file_path, notes, grade, comment, submission_date, team_members
+      FROM lab_submissions
+      WHERE lab_id = ? AND student_id = ?
+    `).get(labId, studentId) as any;
+
+    // Fetch classmates in case of team lab
+    let classmates: any[] = [];
+    if (lab.is_team === 1) {
+      classmates = db.prepare(`
+        SELECT u.id, u.name
+        FROM users u
+        JOIN students_groups sg ON u.id = sg.student_id
+        WHERE sg.group_id = ? AND u.id != ? AND u.is_expelled = 0
+        ORDER BY u.name ASC
+      `).all(groupId, studentId);
+    }
+
+    res.json({
+      lab,
+      submission: submission || null,
+      classmates,
+    });
+  } catch (error) {
+    console.error("Error fetching lab details:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

@@ -7,6 +7,7 @@ import Login from "./pages/Login.tsx";
 import StudentHome from "./pages/student/StudentHome.tsx";
 import StudentGradebook from "./pages/student/StudentGradebook.tsx";
 import StudentSubject from "./pages/student/StudentSubject.tsx";
+import StudentLab from "./pages/student/StudentLab.tsx";
 
 const TeacherHomePlaceholder = () => <div><h1>Кабинет преподавателя</h1><p>Расписание преподавателя</p></div>;
 const TeacherGradebookPlaceholder = () => <div><h1>Журнал оценок группы</h1></div>;
@@ -37,6 +38,7 @@ const App: React.FC = () => {
             <Route path="/student" element={<StudentHome />} />
             <Route path="/student/gradebook" element={<StudentGradebook />} />
             <Route path="/student/subject/:subjectId" element={<StudentSubject />} />
+            <Route path="/student/lab/:labId" element={<StudentLab />} />
           </Route>
 
           {/* Teacher Routes */}
