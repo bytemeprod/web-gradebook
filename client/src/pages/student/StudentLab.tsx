@@ -18,9 +18,65 @@ const StudentLab: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Form states (to be fully integrated in Commit 20 and 21)
+  // Form states
   const [notes, setNotes] = useState("");
   const [selectedPartnerId, setSelectedPartnerId] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUploadError(null);
+    setUploadSuccess(false);
+
+    if (!file) {
+      setUploadError("Пожалуйста, выберите файл для отправки.");
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        try {
+          const base64Data = reader.result as string;
+          await api.post(`/api/student/lab/${labId}/submit`, {
+            fileData: base64Data,
+            fileName: file.name,
+            notes,
+            partnerId: selectedPartnerId || null
+          });
+          setUploadSuccess(true);
+          // Refresh details
+          const data = await api.get(`/api/student/lab/${labId}`);
+          setSubmission(data.submission);
+        } catch (err: any) {
+          console.error("Upload failed inside reader:", err);
+          setUploadError(err.message || "Ошибка при отправке файла.");
+        } finally {
+          setSubmitting(false);
+        }
+      };
+      reader.onerror = () => {
+        setUploadError("Ошибка при чтении файла.");
+        setSubmitting(false);
+      };
+    } catch (err: any) {
+      console.error("Submit execution failed:", err);
+      setUploadError(err.message || "Ошибка при отправке.");
+      setSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     const fetchLabDetails = async () => {
@@ -276,20 +332,31 @@ const StudentLab: React.FC = () => {
                     </div>
                   ) : null}
 
-                  {/* Placeholder Upload form. Logic wired in Commit 20 */}
+                  {/* Upload form */}
                   {(!submission || submission.grade === null) && (
-                    <form onSubmit={(e) => e.preventDefault()} style={{ marginTop: "16px" }}>
+                    <form onSubmit={handleFormSubmit} style={{ marginTop: "16px" }}>
+                      {uploadError && (
+                        <div className="error-banner" style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)", padding: 12, borderRadius: 6, color: "#fca5a5", marginBottom: 16, fontSize: "13px" }}>
+                          {uploadError}
+                        </div>
+                      )}
+                      {uploadSuccess && (
+                        <div className="success-banner" style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.2)", padding: 12, borderRadius: 6, color: "#a7f3d0", marginBottom: 16, fontSize: "13px" }}>
+                          Решение успешно отправлено!
+                        </div>
+                      )}
+
                       {lab.is_team === 1 && (
                         <div style={{ marginBottom: "16px" }}>
                           <label className="form-label" style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px" }}>
                             Выбор напарника (Командная работа)
                           </label>
-                          {/* Partner selector UI. Logic wired in Commit 21 */}
                           <select 
                             className="form-input" 
                             style={{ width: "100%", padding: "10px", borderRadius: "var(--radius-sm)", background: "var(--bg-primary)", border: "1px solid var(--border-color)", color: "var(--text-primary)" }}
                             value={selectedPartnerId}
                             onChange={(e) => setSelectedPartnerId(e.target.value)}
+                            disabled={submitting}
                           >
                             <option value="">Выберите напарника...</option>
                             {classmates.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -306,6 +373,7 @@ const StudentLab: React.FC = () => {
                           placeholder="Напишите комментарий для преподавателя..."
                           value={notes}
                           onChange={(e) => setNotes(e.target.value)}
+                          disabled={submitting}
                         />
                       </div>
 
@@ -316,7 +384,9 @@ const StudentLab: React.FC = () => {
                         <input
                           type="file"
                           style={{ fontSize: "14px" }}
-                          disabled={loading}
+                          onChange={handleFileChange}
+                          disabled={submitting}
+                          required
                         />
                       </div>
 
@@ -324,9 +394,9 @@ const StudentLab: React.FC = () => {
                         type="submit"
                         className="submit-btn"
                         style={{ width: "auto", padding: "10px 24px" }}
-                        disabled={loading}
+                        disabled={submitting}
                       >
-                        Отправить решение
+                        {submitting ? "Отправка..." : "Отправить решение"}
                       </button>
                     </form>
                   )}

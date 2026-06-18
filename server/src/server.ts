@@ -2,10 +2,15 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
+import path from "path";
+import { fileURLToPath } from "url";
 import authRouter from "./routers/auth.ts";
 import teacherRouter from "./routers/teacher.ts";
 import studentRouter from "./routers/student.ts";
 import { errorHandler } from "./middleware/error.ts";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -22,6 +27,7 @@ app.use(express.json());
 app.use("/api/auth", authRouter);
 app.use("/api/teacher", teacherRouter);
 app.use("/api/student", studentRouter);
+app.use("/uploads", express.static(path.resolve(__dirname, "../../uploads")));
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "Server is running" });

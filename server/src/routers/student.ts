@@ -1,6 +1,14 @@
 import { Router, Response } from "express";
 import db from "../db/db.ts";
 import { authMiddleware, AuthenticatedRequest, requireRole } from "../middleware/auth.ts";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { v4 as uuidv4 } from "uuid";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const UPLOADS_DIR = path.resolve(__dirname, "../../../uploads");
 
 const router = Router();
 
@@ -151,8 +159,8 @@ router.get("/subject/:subjectId", (req: AuthenticatedRequest, res: Response): vo
       submissions = db.prepare(`
         SELECT id, lab_id, file_path, notes, grade, comment, submission_date, team_members
         FROM lab_submissions
-        WHERE student_id = ? AND lab_id IN (${placeholders})
-      `).all(studentId, ...labIds);
+        WHERE lab_id IN (${placeholders}) AND (student_id = ? OR team_members LIKE ?)
+      `).all(...labIds, studentId, `%"${studentId}"%`);
     }
 
     res.json({
@@ -197,8 +205,8 @@ router.get("/lab/:labId", (req: AuthenticatedRequest, res: Response): void => {
     const submission = db.prepare(`
       SELECT id, file_path, notes, grade, comment, submission_date, team_members
       FROM lab_submissions
-      WHERE lab_id = ? AND student_id = ?
-    `).get(labId, studentId) as any;
+      WHERE lab_id = ? AND (student_id = ? OR team_members LIKE ?)
+    `).get(labId, studentId, `%"${studentId}"%`) as any;
 
     // Fetch classmates in case of team lab
     let classmates: any[] = [];
@@ -219,6 +227,75 @@ router.get("/lab/:labId", (req: AuthenticatedRequest, res: Response): void => {
     });
   } catch (error) {
     console.error("Error fetching lab details:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/student/lab/:labId/submit
+router.post("/lab/:labId/submit", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const studentId = req.user?.id;
+    const { labId } = req.params;
+    const { fileData, fileName, notes, partnerId } = req.body;
+
+    if (!fileData || !fileName) {
+      res.status(400).json({ error: "File data and file name are required." });
+      return;
+    }
+
+    const lab = db.prepare("SELECT * FROM labs WHERE id = ?").get(labId) as any;
+    if (!lab) {
+      res.status(404).json({ error: "Lab not found." });
+      return;
+    }
+
+    // Ensure uploads directory exists
+    if (!fs.existsSync(UPLOADS_DIR)) {
+      fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+    }
+
+    // Decode base64 file
+    const matches = fileData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      res.status(400).json({ error: "Invalid base64 file data." });
+      return;
+    }
+
+    const base64Buffer = Buffer.from(matches[2], "base64");
+    const uniqueFileName = `${labId}-${studentId}-${Date.now()}-${fileName}`;
+    const filePath = path.join(UPLOADS_DIR, uniqueFileName);
+
+    // Write file to uploads directory
+    fs.writeFileSync(filePath, base64Buffer);
+    const publicFilePath = `/uploads/${uniqueFileName}`;
+
+    // Team members JSON representation
+    const teamMembers = lab.is_team === 1 && partnerId ? JSON.stringify([partnerId]) : null;
+
+    // Check if submission already exists (either as submitter or teammate)
+    const existingSubmission = db.prepare(`
+      SELECT id FROM lab_submissions 
+      WHERE lab_id = ? AND (student_id = ? OR team_members LIKE ?)
+    `).get(labId, studentId, `%"${studentId}"%`) as any;
+
+    const submissionDate = new Date().toISOString().split("T")[0];
+
+    if (existingSubmission) {
+      db.prepare(`
+        UPDATE lab_submissions
+        SET file_path = ?, notes = ?, grade = NULL, comment = NULL, submission_date = ?, team_members = ?
+        WHERE id = ?
+      `).run(publicFilePath, notes || null, submissionDate, teamMembers, existingSubmission.id);
+    } else {
+      db.prepare(`
+        INSERT INTO lab_submissions (id, lab_id, student_id, file_path, notes, grade, comment, submission_date, team_members)
+        VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, ?)
+      `).run(uuidv4(), labId, studentId, publicFilePath, notes || null, submissionDate, teamMembers);
+    }
+
+    res.json({ message: "Solution submitted successfully!", filePath: publicFilePath });
+  } catch (error) {
+    console.error("Error submitting solution:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
