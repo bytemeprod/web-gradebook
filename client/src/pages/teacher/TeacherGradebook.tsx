@@ -18,6 +18,7 @@ const TeacherGradebook: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
+  const [hoveredLessonId, setHoveredLessonId] = useState<string | null>(null);
 
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
@@ -193,7 +194,13 @@ const TeacherGradebook: React.FC = () => {
                     <tr>
                       <th style={{ minWidth: "220px" }}>ФИО Студента</th>
                       {lessons.map(lesson => (
-                        <th key={lesson.id} style={{ width: "70px", textAlign: "center", cursor: "pointer" }} title={lesson.title || "Урок"}>
+                        <th 
+                          key={lesson.id} 
+                          style={{ width: "70px", textAlign: "center", cursor: "pointer", backgroundColor: hoveredLessonId === lesson.id ? "rgba(99, 102, 241, 0.04)" : "" }} 
+                          title={lesson.title || "Урок"}
+                          onMouseEnter={() => setHoveredLessonId(lesson.id)}
+                          onMouseLeave={() => setHoveredLessonId(null)}
+                        >
                           <div style={{ fontSize: "11px", fontWeight: "700" }}>
                             {lesson.date.split("-").slice(1).reverse().join(".")}
                           </div>
@@ -235,7 +242,9 @@ const TeacherGradebook: React.FC = () => {
                             return (
                               <td 
                                 key={lesson.id} 
-                                className={`grade-grid-cell ${valClass}`}
+                                className={`grade-grid-cell ${valClass} ${hoveredLessonId === lesson.id ? "highlight-col" : ""}`}
+                                onMouseEnter={() => setHoveredLessonId(lesson.id)}
+                                onMouseLeave={() => setHoveredLessonId(null)}
                               >
                                 {val || "—"}
                               </td>
