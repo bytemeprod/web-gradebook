@@ -3,10 +3,17 @@ import bcrypt from "bcrypt";
 import path from "path";
 import { fileURLToPath } from "url";
 import { v4 as uuidv4 } from "uuid";
+import fs from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DB_PATH = path.resolve(__dirname, "../../database.db");
+const DB_PATH = process.env.DATABASE_PATH || path.resolve(__dirname, "../../database.db");
+
+// Ensure target directory exists
+const dbDir = path.dirname(DB_PATH);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
 
 async function seed() {
   console.log("Seeding database at:", DB_PATH);
