@@ -41,7 +41,7 @@ app.get("/api/health", (req, res) => {
 });
 
 // Serve client static assets in production
-const clientDistPath = path.resolve(__dirname, "../../../client/dist");
+const clientDistPath = path.resolve(__dirname, "../../client/dist");
 if (fs.existsSync(clientDistPath)) {
   app.use(express.static(clientDistPath));
   app.get("*", (req, res, next) => {
